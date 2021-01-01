@@ -183,6 +183,36 @@ class VectorTileSource extends Evented implements Source {
 
     loadTile(tile: Tile, callback: Callback<void>) {
         const url = this.map._requestManager.normalizeTileURL(tile.tileID.canonical.url(this.tiles, this.scheme));
+
+        if (this.map._requestManager._transformRequestFn.length == 4) {
+            this.map._requestManager._transformRequestFn(url, ResourceType.Tile, tile, result => {
+                const params = {
+                    request: result,
+                    uid: tile.uid,
+                    tileID: tile.tileID,
+                    zoom: tile.tileID.overscaledZ,
+                    tileSize: this.tileSize * tile.tileID.overscaleFactor(),
+                    type: this.type,
+                    source: this.id,
+                    pixelRatio: browser.devicePixelRatio,
+                    showCollisionBoxes: this.map.showCollisionBoxes,
+                    promoteId: this.promoteId
+                };
+                params.request.collectResourceTiming = this._collectResourceTiming;
+
+                if (!tile.actor || tile.state === 'expired') {
+                    tile.actor = this.dispatcher.getActor();
+                    tile.request = tile.actor.send('loadTile', params, done.bind(this));
+                } else if (tile.state === 'loading') {
+                    // schedule tile reloading after it has been loaded
+                    tile.reloadCallback = callback;
+                } else {
+                    tile.request = tile.actor.send('reloadTile', params, done.bind(this));
+                }
+            })
+           return;
+        }
+
         const params = {
             request: this.map._requestManager.transformRequest(url, ResourceType.Tile),
             uid: tile.uid,
