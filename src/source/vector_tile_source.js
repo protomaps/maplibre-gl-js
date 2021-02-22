@@ -184,7 +184,7 @@ class VectorTileSource extends Evented implements Source {
     loadTile(tile: Tile, callback: Callback<void>) {
         const url = this.map._requestManager.normalizeTileURL(tile.tileID.canonical.url(this.tiles, this.scheme));
 
-        if (this.map._requestManager._transformRequestFn.length == 4) {
+        if (this.map._requestManager._transformRequestFn && this.map._requestManager._transformRequestFn.length == 4) {
             this.map._requestManager._transformRequestFn(url, ResourceType.Tile, tile, result => {
                 const params = {
                     request: result,
